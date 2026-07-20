@@ -7,17 +7,16 @@ permissions:
   id-token: write
   contents: read
 
+concurrency:
+  group: terraform-eks
+  cancel-in-progress: false
+
 env:
   TF_VERSION: "1.12.2"
   AWS_REGION: us-east-1
   TF_WORKING_DIR: eks/
 
 jobs:
-
-#########################################################
-# Phase 1 - Core Infrastructure
-#########################################################
-
   infrastructure-phase1:
     runs-on: ubuntu-latest
 
@@ -26,38 +25,39 @@ jobs:
         working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::407933037859:role/terraform-rola
           aws-region: us-east-1
 
-      - uses: hashicorp/setup-terraform@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -input=false
 
       - name: Terraform Format Check
         run: terraform fmt -check -diff
-        continue-on-error: false
 
       - name: Terraform Validate
         run: terraform validate
-        continue-on-error: false
 
       - name: Terraform Plan
         run: |
-         terraform plan \
-         -var-file=dev.tfvars \
-         -out=tfplan \
-         -input=false
+          terraform plan \
+            -var-file=dev.tfvars \
+            -out=tfplan \
+            -input=false
 
       - name: Terraform Apply
         run: |
-         terraform apply \
-         -auto-approve \
-         tfplan
-        
+          terraform apply \
+            -auto-approve \
+            -input=false \
+            tfplan
