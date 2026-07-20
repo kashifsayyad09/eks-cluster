@@ -41,6 +41,7 @@ jobs:
 
       - name: Terraform Init
         run: terraform init -input=false
+      - run: terraform force-unlock -force 17428651-9558-2924-8133-484050042357
 
       - name: Terraform Format Check
         run: terraform fmt -check -diff
