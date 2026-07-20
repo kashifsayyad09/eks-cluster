@@ -1,49 +1,41 @@
-name: 'EKS-Terraform-Plan'
+name: Three-Tier Infrastructure Deployment
 
 on:
-  push:
-    branches: 
-      - '**'
-
-
-env: 
-  AWS_REGION: us-east-1
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  workflow_dispatch:
 
 permissions:
+  id-token: write
   contents: read
 
+env:
+  TF_VERSION: "1.12.2"
+  AWS_REGION: us-east-1
+  TF_WORKING_DIR: eks/
+
 jobs:
-  terraform:
-    name: Terraform Plan
+
+#########################################################
+# Phase 1 - Core Infrastructure
+#########################################################
+
+  infrastructure-phase1:
     runs-on: ubuntu-latest
-    environment: production
 
     defaults:
       run:
-        shell: bash
-        working-directory: eks
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with: 
-          terraform_version: 1.9.3
-          terraform_wrapper: true
-
-      - name: Cache Terraform
-        uses: actions/cache@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
-          path: |
-            ~/.terraform.d/plugin-cache
-            .terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.tf') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
+          role-to-assume: ${{ secrets.ARN }}
+          aws-region: us-east-1
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Init
         run: terraform init
