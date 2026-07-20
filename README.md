@@ -18,7 +18,7 @@ This project covers:
 - **CI/CD Automation**: Leverage GitHub Actions to automate deployments.
 
 ## 🌟 Comprehensive Guide
-For a detailed guide, please refer to my [blog post on Medium](https://medium.com/p/c046e8d44865).
+For a detailed guide, please refer to my [blog post on Medium](https://medium.com/@kashifsayyad09/what-is-terraform-6d14607a539c).
 
 ## 🤝 Contributing
 Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
@@ -31,6 +31,6 @@ This project is licensed under the Apache 2.0 License. See the [LICENSE](LICENSE
 - **Discussions**: Join discussions, ask questions, and connect with fellow learners in the GitHub Discussions section.
 
 ## 📢 Spread the Word
-Share your journey with your network and tag me, [Aman Pathak](https://www.linkedin.com/in/aman-devops), when you post your blogs on LinkedIn. Let's learn together!
+Share your journey with your network and tag me, [Syed Kashif Ali](https://www.linkedin.com/in/syed-kashif-ali-844137292/), when you post your blogs on LinkedIn. Let's learn together!
 
 Happy learning and blogging! 🌟
