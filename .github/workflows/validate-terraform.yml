@@ -1,4 +1,4 @@
-name: Three-Tier Infrastructure Deployment
+name: EKS-CLUSTER
 
 on:
   workflow_dispatch:
