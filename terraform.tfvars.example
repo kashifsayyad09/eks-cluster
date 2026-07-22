@@ -1,0 +1,33 @@
+# Copy this file to env/<env>/terraform.tfvars and adjust per environment,
+# or copy to terraform.tfvars in the root for a single-environment deploy.
+
+project_name = "veera"
+environment  = "dev"
+owner        = "drocart"
+aws_region   = "us-east-1"
+
+vpc_cidr                = "10.0.0.0/16"
+availability_zone_count = 3
+single_nat_gateway      = true
+
+# Leave both of these as "" to have Terraform create fresh IAM roles.
+# Set to an existing role name to reuse a role that already exists in
+# the account (e.g. one pre-provisioned by a Pluralsight sandbox).
+existing_cluster_role_name = ""
+existing_node_role_name    = ""
+
+kubernetes_version      = null # null = latest EKS-supported version
+endpoint_private_access = true
+endpoint_public_access  = true
+public_access_cidrs     = ["0.0.0.0/0"] # restrict to your IP/CIDR in prod
+
+node_instance_types = ["t3.medium"]
+node_capacity_type  = "ON_DEMAND"
+node_disk_size_gb   = 30
+node_desired_size   = 2
+node_min_size       = 2
+node_max_size       = 4
+ssh_key_name        = ""
+
+create_app_bucket = true
+app_bucket_name    = "" # leave empty to auto-generate a unique name
