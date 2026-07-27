@@ -9,7 +9,7 @@ permissions:
 
 env:
   AWS_REGION: us-east-1
-  BUCKET_NAME: my-company-tf-state
+  BUCKET_NAME: qwertsgitlabinfra
   DYNAMODB_TABLE: terraform-locks
 
 jobs:
