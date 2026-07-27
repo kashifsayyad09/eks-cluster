@@ -14,7 +14,7 @@ concurrency:
 env:
   TF_VERSION: "1.12.2"
   AWS_REGION: us-east-1
-  TF_WORKING_DIR: eks/
+  TF_WORKING_DIR: eks-cluster
 
 jobs:
   infrastructure-phase1:
