@@ -80,7 +80,11 @@ jobs:
       ##################################################
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: |
+         terraform plan \
+          -input=false \
+          -var-file="env/dev/terraform.tfvars" \
+          -out=tfplan
 
       ##################################################
 
