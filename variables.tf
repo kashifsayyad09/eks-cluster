@@ -149,7 +149,7 @@ variable "cluster_log_retention_days" {
 variable "node_instance_types" {
   description = "EC2 instance types for the managed node group (first type is primary; extras allow Spot diversification)."
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["t2.medium"]
 }
 
 variable "node_capacity_type" {
