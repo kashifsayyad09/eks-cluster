@@ -25,8 +25,12 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::548830423449:role/admin-ec2
-          aws-region: ${{ env.AWS_REGION }}
+         role-to-assume: arn:aws:iam::548830423449:role/admin-ec2
+         aws-region: ${{ env.AWS_REGION }}
+         disable-retry: true
+
+      - name: Verify AWS Identity
+        run: aws sts get-caller-identity
 
       - name: Create S3 Bucket
         run: |
