@@ -51,8 +51,26 @@ jobs:
 
       ##################################################
 
+      - name: Debug Terraform Files
+        run: |
+         echo "Current directory:"
+         pwd
+
+         echo "Repository files:"
+         find . -maxdepth 4 -type f | sort
+
+         echo "Backend config:"
+         cat env/dev/backend.hcl
+
+         echo "Terraform backend declarations:"
+         grep -R 'backend "s3"' -n . || true
+
       - name: Terraform Init
-        run: terraform init -backend-config=env/dev/backend.hcl -input=false
+        run: |
+         terraform init \
+          -input=false \
+          -reconfigure \
+          -backend-config="env/dev/backend.hcl"
 
       ##################################################
 
