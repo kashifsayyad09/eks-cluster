@@ -142,6 +142,24 @@ variable "cluster_log_retention_days" {
   default     = 30
 }
 
+variable "authentication_mode" {
+  description = "EKS authentication mode: API, API_AND_CONFIG_MAP, or CONFIG_MAP. API_AND_CONFIG_MAP avoids the CONFIG_MAP-only default that caused kubectl authorization failures in CI."
+  type        = string
+  default     = "API_AND_CONFIG_MAP"
+}
+
+variable "bootstrap_cluster_creator_admin_permissions" {
+  description = "Grant the IAM principal running `terraform apply` (e.g. the GitHub Actions OIDC role) cluster-admin access automatically."
+  type        = bool
+  default     = true
+}
+
+variable "cluster_admin_principal_arns" {
+  description = "Extra IAM user/role ARNs to grant AmazonEKSClusterAdminPolicy via EKS access entries (e.g. your Pluralsight Sandbox cloud_user ARN so `kubectl get nodes` works without a manual associate-access-policy call)."
+  type        = list(string)
+  default     = []
+}
+
 # -----------------------------------------------------------------------
 # Managed node group
 # -----------------------------------------------------------------------
@@ -149,7 +167,7 @@ variable "cluster_log_retention_days" {
 variable "node_instance_types" {
   description = "EC2 instance types for the managed node group (first type is primary; extras allow Spot diversification)."
   type        = list(string)
-  default     = ["t2.medium"]
+  default     = ["t3.medium"]
 }
 
 variable "node_capacity_type" {
@@ -196,6 +214,42 @@ variable "ssh_key_name" {
 # -----------------------------------------------------------------------
 # Application S3 bucket
 # -----------------------------------------------------------------------
+
+variable "create_github_actions_role" {
+  description = "Whether to create the GitHub Actions OIDC IAM role (modules/github-oidc). Fixes the 'Not authorized to perform sts:AssumeRoleWithWebIdentity' CI error by giving Terraform ownership of the trust policy instead of hand-editing it."
+  type        = bool
+  default     = false
+}
+
+variable "github_org" {
+  description = "GitHub org/username that owns the repo (required if create_github_actions_role = true)."
+  type        = string
+  default     = ""
+}
+
+variable "github_repo" {
+  description = "GitHub repo name (required if create_github_actions_role = true)."
+  type        = string
+  default     = ""
+}
+
+variable "github_allowed_refs" {
+  description = "OIDC subject-claim ref patterns allowed to assume the CI role, e.g. [\"ref:refs/heads/main\"]."
+  type        = list(string)
+  default     = ["ref:refs/heads/main"]
+}
+
+variable "github_oidc_provider_already_exists" {
+  description = "Set true if an IAM OIDC provider for token.actions.githubusercontent.com already exists in this AWS account (only one is allowed per account) so this stack reuses it instead of trying to create a duplicate."
+  type        = bool
+  default     = false
+}
+
+variable "existing_github_oidc_provider_arn" {
+  description = "ARN of the existing GitHub OIDC provider, required when github_oidc_provider_already_exists = true."
+  type        = string
+  default     = ""
+}
 
 variable "create_app_bucket" {
   description = "Whether to create the application/artifact S3 bucket (modules/s3)."

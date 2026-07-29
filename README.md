@@ -187,7 +187,41 @@ Or use the wrapper script, which runs the same sequence end-to-end:
 Switch environments by changing the argument (`qa`, `prod`) — each has its
 own state key and its own tfvars, so `dev` and `prod` never collide.
 
-## 11. Tearing down
+## 11. CI/CD error fixes (from real troubleshooting)
+
+The following were hit while running this exact project through Terraform +
+GitHub Actions + EKS. Each is now fixed **in code**, not just documented.
+
+| # | Symptom | Root cause | Fix now in this repo |
+|---|---|---|---|
+| 1 | `Could not assume role with OIDC: Not authorized to perform sts:AssumeRoleWithWebIdentity` | IAM role trust policy didn't correctly match the GitHub OIDC token's `aud`/`sub` claims | `modules/github-oidc` builds the trust policy from the token's actual claims (audience pinned to `sts.amazonaws.com`, subject pinned to `repo:<org>/<repo>:<ref>`). Set `create_github_actions_role = true` + `github_org`/`github_repo` in tfvars, then reference `github_actions_role_arn` output in your workflow's `role-to-assume`. `.github/workflows/terraform-eks.yml` ships wired up to a `vars.TERRAFORM_CI_ROLE_ARN` repo variable. |
+| 2 | `Node 20 is being deprecated...` warning | Runner-level Node.js version notice, unrelated to Terraform/AWS | Not a bug — left as-is; the workflow uses current action versions (`actions/checkout@v4`, `aws-actions/configure-aws-credentials@v4`, `hashicorp/setup-terraform@v3`). |
+| 3 | `terraform init` hung waiting for an S3 bucket name | Ran without `-backend-config` | Every `init` call in `scripts/deploy.sh`, `scripts/destroy.sh`, and the workflow explicitly passes `-backend-config="env/<env>/backend.hcl"` and `-input=false` so a missing value fails immediately instead of prompting. |
+| 4 | Provider install looked stuck (`Installing hashicorp/aws v6.56.0...`) | Normal first-run provider download on a fresh runner, not an error | No fix needed; `versions.tf` pins a range so this only happens once per runner unless you add provider caching. |
+| 5 | `terraform plan` hung waiting for `var.environment` | Ran without `-var-file` | Every `plan`/`apply`/`destroy` call passes `-var-file="env/<env>/terraform.tfvars"` and `-input=false`. |
+| 6 | `Error acquiring the state lock ... 412 PreconditionFailed` | Leftover `.tflock` object from an interrupted/overlapping run | Kept `use_lockfile = true` (this is locking working correctly, not a bug to disable). Added a `concurrency: {group: terraform-dev, cancel-in-progress: false}` block to the workflow so overlapping runs queue instead of racing, plus `scripts/force-unlock.sh <env> <lock-id>` for the rare legitimate manual unlock. |
+| 7 | `kubectl`: *"the server has asked for the client to provide credentials"* | kubeconfig was fine; the calling AWS principal had no cluster authorization yet | Fixed together with #8/#9 below via `access_config`. |
+| 8 | Cluster reported `"authenticationMode": "CONFIG_MAP"` | `aws_eks_cluster` had no `access_config` block, so EKS defaulted to CONFIG_MAP-only instead of the modern access-entry model | `modules/eks` now sets `access_config { authentication_mode = "API_AND_CONFIG_MAP" }` at creation time (`authentication_mode` variable, default `"API_AND_CONFIG_MAP"`), and it's owned by Terraform going forward instead of being changed out-of-band with `aws eks update-cluster-config`. |
+| 9 | `Error from server (Forbidden): nodes is forbidden: User "...cloud_user" cannot list resource "nodes"` | Principal was authenticated but had no EKS access policy associated | `bootstrap_cluster_creator_admin_permissions = true` grants the applying principal (e.g. the GitHub Actions CI role) cluster-admin automatically. For additional humans/CI principals (e.g. your sandbox `cloud_user`), set `cluster_admin_principal_arns = ["arn:aws:iam::<acct>:user/cloud_user"]` in tfvars — Terraform creates the `aws_eks_access_entry` + `aws_eks_access_policy_association` (`AmazonEKSClusterAdminPolicy`, cluster scope) for you, replacing the manual `aws eks associate-access-policy` call. |
+| 10 | `kubectl get nods` (typo) | Human typo | Not a code issue — `scripts/get-kubeconfig.sh` runs the correct commands for you so there's nothing to mistype during verification. |
+
+### One manual step this can't remove
+
+`modules/github-oidc` is itself deployed *by* Terraform, which means the
+**very first** `terraform apply` that creates the CI role has to be run by a
+human (or an already-trusted principal) — CI can't bootstrap the role that
+lets CI authenticate. After that first apply, copy the `github_actions_role_arn`
+output into a GitHub repo variable named `TERRAFORM_CI_ROLE_ARN`
+(Settings → Secrets and variables → Actions → Variables), and every
+subsequent run uses OIDC.
+
+Also note: an AWS account can only have **one** IAM OIDC provider per issuer
+URL. If you already created a `token.actions.githubusercontent.com` provider
+in another stack, set `github_oidc_provider_already_exists = true` and
+`existing_github_oidc_provider_arn = "<arn>"` in qa/prod tfvars so this stack
+reuses it instead of failing on a duplicate-provider error.
+
+## 12. Tearing down
 
 ```bash
 ./scripts/destroy.sh dev

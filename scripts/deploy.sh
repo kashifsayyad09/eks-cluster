@@ -21,16 +21,16 @@ echo ">>> Formatting"
 terraform fmt -recursive
 
 echo ">>> Initializing backend for ${ENV}"
-terraform init -backend-config="env/${ENV}/backend.hcl" -reconfigure
+terraform init -input=false -backend-config="env/${ENV}/backend.hcl" -reconfigure
 
 echo ">>> Validating"
 terraform validate
 
 echo ">>> Planning"
-terraform plan -var-file="env/${ENV}/terraform.tfvars" -out="${ENV}.tfplan"
+terraform plan -input=false -var-file="env/${ENV}/terraform.tfvars" -out="${ENV}.tfplan"
 
 echo ">>> Applying"
-terraform apply "${ENV}.tfplan"
+terraform apply -input=false "${ENV}.tfplan"
 
 CLUSTER_NAME=$(terraform output -raw cluster_name)
 REGION=$(terraform output -raw aws_region 2>/dev/null || echo "us-east-1")

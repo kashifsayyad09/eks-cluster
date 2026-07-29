@@ -80,6 +80,9 @@ module "eks" {
   public_access_cidrs         = var.public_access_cidrs
   cluster_log_types           = var.cluster_log_types
   cluster_log_retention_days  = var.cluster_log_retention_days
+  authentication_mode                         = var.authentication_mode
+  bootstrap_cluster_creator_admin_permissions = var.bootstrap_cluster_creator_admin_permissions
+  admin_principal_arns                        = var.cluster_admin_principal_arns
   tags                        = local.common_tags
 }
 
@@ -104,6 +107,25 @@ module "node_group" {
   max_size                = var.node_max_size
   ssh_key_name            = var.ssh_key_name
   tags                    = local.common_tags
+}
+
+# -----------------------------------------------------------------------
+# GitHub Actions OIDC CI role (optional - fixes error #1 in the CI
+# troubleshooting log: "Not authorized to perform
+# sts:AssumeRoleWithWebIdentity")
+# -----------------------------------------------------------------------
+
+module "github_oidc" {
+  source = "./modules/github-oidc"
+  count  = var.create_github_actions_role ? 1 : 0
+
+  name_prefix                = local.name_prefix
+  github_org                 = var.github_org
+  github_repo                = var.github_repo
+  allowed_refs                = var.github_allowed_refs
+  create_oidc_provider        = !var.github_oidc_provider_already_exists
+  existing_oidc_provider_arn  = var.existing_github_oidc_provider_arn
+  tags                        = local.common_tags
 }
 
 # -----------------------------------------------------------------------

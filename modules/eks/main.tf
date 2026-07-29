@@ -43,12 +43,64 @@ resource "aws_eks_cluster" "this" {
 
   enabled_cluster_log_types = var.cluster_log_types
 
+  # WHY THIS BLOCK EXISTS:
+  # Without an explicit access_config, EKS creates the cluster in
+  # CONFIG_MAP-only authentication mode. That was the direct cause of the
+  # "nodes is forbidden" kubectl error in troubleshooting - the applying
+  # principal had no aws-auth ConfigMap entry AND no access entry, so it
+  # was authenticated but not authorized. Setting
+  # bootstrap_cluster_creator_admin_permissions = true makes the principal
+  # that ran `terraform apply` (the GitHub Actions OIDC role, in CI) a
+  # cluster admin automatically, at creation time - no follow-up
+  # `aws eks associate-access-policy` call required.
+  access_config {
+    authentication_mode                         = var.authentication_mode
+    bootstrap_cluster_creator_admin_permissions = var.bootstrap_cluster_creator_admin_permissions
+  }
+
   tags = merge(var.tags, {
     Name = var.cluster_name
   })
 
   depends_on = [aws_cloudwatch_log_group.cluster]
 }
+
+# -----------------------------------------------------------------------
+# Additional cluster-admin access entries
+#
+# Grants any extra IAM principals (e.g. arn:aws:iam::<acct>:user/cloud_user
+# in the Pluralsight Sandbox) AmazonEKSClusterAdminPolicy at cluster scope,
+# managed by Terraform instead of a manual `aws eks associate-access-policy`
+# CLI call that would otherwise drift out of sync with this codebase.
+# -----------------------------------------------------------------------
+
+resource "aws_eks_access_entry" "admin" {
+  for_each = toset(var.admin_principal_arns)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  type          = "STANDARD"
+
+  tags = merge(var.tags, {
+    Name = "${var.name_prefix}-access-entry-admin"
+  })
+}
+
+resource "aws_eks_access_policy_association" "admin" {
+  for_each = toset(var.admin_principal_arns)
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = each.value
+  policy_arn    = "arn:${data.aws_partition.current.partition}:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+
+  depends_on = [aws_eks_access_entry.admin]
+}
+
+data "aws_partition" "current" {}
 
 # -----------------------------------------------------------------------
 # OIDC provider (enables IRSA)

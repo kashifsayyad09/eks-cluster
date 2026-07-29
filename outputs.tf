@@ -77,6 +77,11 @@ output "app_bucket_name" {
   value       = var.create_app_bucket ? module.s3[0].bucket_id : null
 }
 
+output "github_actions_role_arn" {
+  description = "Paste into the workflow's role-to-assume input (null if create_github_actions_role = false)"
+  value       = var.create_github_actions_role ? module.github_oidc[0].role_arn : null
+}
+
 output "aws_region" {
   description = "Region this stack was deployed into"
   value       = var.aws_region

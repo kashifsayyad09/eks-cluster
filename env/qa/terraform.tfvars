@@ -23,5 +23,16 @@ node_min_size       = 2
 node_max_size       = 4
 ssh_key_name        = ""
 
+authentication_mode                         = "API_AND_CONFIG_MAP"
+bootstrap_cluster_creator_admin_permissions = true
+cluster_admin_principal_arns                = []
+
+create_github_actions_role          = false
+github_org                          = ""
+github_repo                         = ""
+github_allowed_refs                 = ["ref:refs/heads/main"]
+github_oidc_provider_already_exists = true # reuse the provider created by the dev stack
+existing_github_oidc_provider_arn   = ""
+
 create_app_bucket = true
 app_bucket_name    = ""

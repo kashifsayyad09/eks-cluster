@@ -1,0 +1,133 @@
+name: Terraform EKS (dev)
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "**.tf"
+  #     - "env/dev/**"
+  #     - ".github/workflows/terraform-eks.yml"
+  # pull_request:
+  #   branches: [main]
+  #   paths:
+  #     - "**.tf"
+  #     - "env/dev/**"
+  # workflow_dispatch:
+  #   inputs:
+  #     action:
+  #       description: "Terraform action to run"
+  #       required: true
+  #       default: "plan"
+  #       type: choice
+  #       options: ["plan", "apply", "destroy"]
+
+# FIXES ERROR #6 (S3 state lock 412 PreconditionFailed):
+# Without this, two overlapping runs (e.g. a push and a manually
+# re-triggered run) can race for the same S3 state lock. Serializing runs
+# per-environment, and refusing to cancel an in-progress apply
+# (cancel-in-progress: false), is exactly what the troubleshooting log
+# recommended instead of disabling locking.
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TF_ENV: dev
+
+permissions:
+  # FIXES ERROR #1 (OIDC AssumeRoleWithWebIdentity not authorized):
+  # id-token: write is what allows GitHub to mint the OIDC token in the
+  # first place - without it, aws-actions/configure-aws-credentials has
+  # nothing to exchange for AWS credentials, regardless of how correct the
+  # IAM trust policy is.
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event.inputs.action || 'plan' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # FIXES ERROR #1: role-to-assume points at the role created by
+      # modules/github-oidc, whose trust policy is version-controlled here
+      # instead of hand-edited in the console.
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.TERRAFORM_CI_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          disable-retry: true
+
+      - name: Verify caller identity
+        run: aws sts get-caller-identity
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.12.0"
+
+      - name: Terraform fmt (check only)
+        run: terraform fmt -check -recursive
+
+      # FIXES ERROR #3 (terraform init waited for the S3 bucket):
+      # backend-config is passed explicitly and -input=false makes any
+      # missing value fail fast instead of hanging on an interactive
+      # prompt in a non-interactive runner.
+      - name: Terraform init
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="env/${TF_ENV}/backend.hcl"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      # FIXES ERROR #5 (terraform plan waited for var.environment):
+      # var-file is passed explicitly, -input=false again fails fast on
+      # any variable Terraform can't resolve instead of blocking the job.
+      - name: Terraform plan
+        if: github.event.inputs.action != 'destroy'
+        run: |
+          terraform plan \
+            -input=false \
+            -var-file="env/${TF_ENV}/terraform.tfvars" \
+            -out=tfplan
+
+      - name: Terraform apply
+        if: github.event.inputs.action == 'apply'
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            tfplan
+
+      - name: Terraform destroy
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          terraform init \
+            -input=false \
+            -backend-config="env/${TF_ENV}/backend.hcl"
+          terraform destroy \
+            -input=false \
+            -auto-approve \
+            -var-file="env/${TF_ENV}/terraform.tfvars"
+
+      # Final verification commands from the troubleshooting log's
+      # "Recommended Final CI/CD Pattern" - confirms both AWS auth AND
+      # Kubernetes cluster access (authentication AND authorization) in
+      # one job, so a broken access entry fails CI instead of surfacing
+      # later as a manual "nodes is forbidden" error.
+      - name: Update kubeconfig and verify cluster access
+        if: github.event.inputs.action == 'apply'
+        run: |
+          CLUSTER_NAME=$(terraform output -raw cluster_name)
+          aws eks update-kubeconfig --name "${CLUSTER_NAME}" --region "${AWS_REGION}"
+          kubectl get nodes
+          kubectl get pods -A
+          kubectl auth can-i '*' '*' --all-namespaces

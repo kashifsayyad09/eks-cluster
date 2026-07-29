@@ -7,5 +7,5 @@ set -euo pipefail
 
 ENV="${1:-dev}"
 
-terraform init -backend-config="env/${ENV}/backend.hcl" -reconfigure
-terraform destroy -var-file="env/${ENV}/terraform.tfvars"
+terraform init -input=false -backend-config="env/${ENV}/backend.hcl" -reconfigure
+terraform destroy -input=false -var-file="env/${ENV}/terraform.tfvars"
