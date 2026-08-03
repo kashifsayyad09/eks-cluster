@@ -16,7 +16,7 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::615037471716:role/roleterra
+          role-to-assume: arn:aws:iam::615037471716:role/terraformrole
           aws-region: us-east-1
 
       - run: aws sts get-caller-identity
