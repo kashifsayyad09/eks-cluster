@@ -25,7 +25,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-         role-to-assume: arn:aws:iam::548830423449:role/admin-ec2
+         role-to-assume: arn:aws:iam::615037471716:role/role-terraform
          aws-region: ${{ env.AWS_REGION }}
          disable-retry: true
 
