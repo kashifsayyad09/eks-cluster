@@ -77,26 +77,25 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      ##################################################
+      #################################################
 
-      # - name: Terraform Plan
-      #   run: |
-      #    terraform plan \
-      #     -input=false \
-      #     -var-file="env/dev/terraform.tfvars" \
-      #     -out=tfplan
-
-      # ##################################################
-
-      # - name: Upload Plan
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: tfplan
-      #     path: tfplan
+      - name: Terraform Plan
+        run: |
+         terraform plan \
+          -input=false \
+          -var-file="env/dev/terraform.tfvars" \
+          -out=tfplan
 
       ##################################################
+
+      - name: Upload Plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: tfplan
+
+      #################################################
 
       - name: Terraform destroy
         if: github.ref == 'refs/heads/main'
-        run: terraform destroy -auto-approve
-        # run: terraform destroy -auto-approve tfplan
+        run: terraform destroy -auto-approve tfplan
