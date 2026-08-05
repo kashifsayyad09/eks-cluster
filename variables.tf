@@ -167,7 +167,7 @@ variable "cluster_admin_principal_arns" {
 variable "node_instance_types" {
   description = "EC2 instance types for the managed node group (first type is primary; extras allow Spot diversification)."
   type        = list(string)
-  default     = ["c7i-flex.large"]
+  default     = ["t2.medium"]
 }
 
 variable "node_capacity_type" {
