@@ -15,7 +15,7 @@ endpoint_private_access = true
 endpoint_public_access  = true
 public_access_cidrs     = ["0.0.0.0/0"]
 
-node_instance_types = ["t3.medium"]
+node_instance_types = ["t2.medium"]
 node_capacity_type  = "ON_DEMAND"
 node_disk_size_gb   = 30
 node_desired_size   = 2
